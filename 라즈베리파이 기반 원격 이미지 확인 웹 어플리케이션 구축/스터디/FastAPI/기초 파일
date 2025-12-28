@@ -1,0 +1,49 @@
+from fastapi import FastAPI, Form, UploadFile, File
+from pydantic import BaseModel, Field, field_validator, EmailStr, constr
+from typing import List
+
+app = FastAPI()
+
+class User(BaseModel):
+    name: str= constr(pattern=r'^[a-zA-Z0-9_.-]+$') 
+    email: EmailStr= Field(description="이메일")
+    age: int= Field(..., gt= 0, le= 120, description="나이")
+    
+    
+    @field_validator('name')
+    def nam_must_not_contain_space(cls, v):
+        if ' ' in v :
+            raise ValueError('username must not contain space')
+        else :
+            return v
+        
+            
+app= FastAPI()
+
+@app.post("/register/")
+async def register_user(user: User):
+    return user
+    
+
+@app.post("/login/")
+async def login(username: str = Form(...), password: str = Form(...)):
+    return {"username": username, "message": "Login succesful"}
+
+
+@app.post("/uploadfile/")
+async def create_upload_file(file: UploadFile = File(...)) :
+    return {"filename": file.filename}
+
+
+#업로드된 파일 저장하기
+@app.post("/savefile/")
+async def save_upload_file(file: UploadFile = File(...)) :
+    with open(f'uploads/{file.filename}', "wb") as f:
+        f. write(file.file.read())
+    return {"message": f"File '{file.filename}' saved successfully"}
+
+
+#다중 파일 업로드
+@app.post("/uploadfiles")
+async def upload_files(files: List[UploadFile] = File(...)):
+    return {"filenames": [file.filename for file in files]}
